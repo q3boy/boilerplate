@@ -1,0 +1,64 @@
+#!/bin/bash
+
+realpath() {
+  [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
+
+dir=$(dirname $(realpath $0))
+
+
+if [ -d $1 ]; then
+  echo -e "\033[4m\033[33m$1\033[0m 目录已存在"
+  exit 1
+fi
+
+echo -e -n "    \033[32m[初始化]\033[0m 复制文件"
+cp -r $dir $1
+cd $1
+rm -fr .git
+echo -e "\033[1000D\033[32m ✓\033[0m"
+
+if [ ! -d ".git" ]; then
+  echo -e -n "    \033[32m[初始化]\033[0m Git 环境"
+  git init -q
+  echo -e "\033[1000D\033[32m ✓\033[0m"
+fi
+if [ ! -f package.json ]; then
+  echo -e -n "    \033[32m[初始化]\033[0m Npm 描述文件"
+  npm init -y > /dev/null
+  sed 's/"test": "echo .*$/"test": "npx ava -v", "ls": "npm ls --depth=0", "up": "npm update --save \&\& npm dedupe --save", "cover": "rm -fr coverage \&\& npx nyc ava", "dev": "npx ava -v -w", "build": "rm -rf dist \&\& npx ncc build -m --no-source-map-register -C .\/index.js"/g' package.json > _tmp.json && rm -f package.json && mv _tmp.json package.json
+  echo -e "\033[1000D\033[32m ✓\033[0m"
+fi
+if [ ! -h node_modules ]; then
+  echo -e -n "    \033[32m[修复]\033[0m \033[4m\033[33mnode_modues\033[0m 目录 (跳过 iCloud 同步)"
+  if [ -e node_modules ]; then
+    mv node_modules node_modules.nosync
+  else
+    mkdir node_modules.nosync
+  fi
+  ln -s node_modules.nosync node_modules
+  echo -e "\033[1000D\033[32m ✓\033[0m"
+fi
+if [ -f package.json ]; then
+  echo -e "    \033[32m[安装]\033[0m 默认依赖库"
+  npm install --silent --save-dev typescript ts-node ava @types/node husky nyc @zeit/ncc > /dev/null
+  npm dedupe --silent --save > /dev/null
+  # npm install --silent --save-dev  @zeit/ncc > /dev/null
+  echo -e "\033[1A\033[1000D\033[32m ✓\033[0m"
+fi
+
+echo -e "    \033[32m[初始化]\033[0m 输入模块文件名 (空格分隔)"
+read flist
+if [ ! -e lib ]; then
+  mkdir lib
+fi
+if [ ! -e test/mock ]; then
+  mkdir -p test/mock
+fi
+for file in $flist; do
+  touch lib/$file.ts
+  touch test/test-$file.ts
+done
+echo -e "\033[2A\033[1000D\033[32m ✓\033[0m"
+echo -e "\033[32m 初始化完成\033[0m                                     "

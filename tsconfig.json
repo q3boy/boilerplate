@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "lib":["es2020"],
+    "esModuleInterop": true,
+    "target": "es2020",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "*": [
+        "node_modules/*",
+        "types/*"
+      ]
+    }
+  },
+  "compileOnSave": false,
+  "filesGlob": [
+    "./lib/**/*.ts",
+    "!node_modules/**/*.ts",
+    "!node_modules.nosync/**/*.ts"
+  ],
+  "include": [
+    "lib/**/*"
+  ]
+}
