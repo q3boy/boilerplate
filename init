@@ -73,10 +73,8 @@ fi
 
 if [ ! -f package.json ]; then
   echo -e -n "    \033[32m[初始化]\033[0m Npm 描述文件"
-  npm init -y > /dev/null
-  sed 's/"test": "echo .*$/"test": "npx ava -v", "ls": "npm ls --depth=0", "up": "npm update --save \&\& npm dedupe --save", "cover": "rm -fr coverage \&\& npx nyc ava", "dev": "npx ava -v -w", "build": "rm -rf dist \&\& npx ncc build -m --no-source-map-register -C .\/index.js"/g' package.json | sed 's/^}$/,"husky": {"hooks": {"pre-commit": "npm test", "pre-push": "npm test"}}}/g' > _tmp.json && rm -f package.json && mv _tmp.json package.json
-
-
+  sed "s/#name#/$(basename $TARGET)/g" .package.json > package.json
+  rm -f .package.json
   echo -e "\033[1000D\033[32m ✓\033[0m"
 fi
 
