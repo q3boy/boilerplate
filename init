@@ -4,6 +4,11 @@ realpath() {
   [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
+upper() {
+  echo $(echo ${1:0:1} | tr '[a-z]' '[A-Z]')${1:1}
+
+}
+
 
 BASE=$(dirname $(realpath $0))
 
@@ -17,6 +22,10 @@ for i in "$@"; do
     FILE=$(echo ${i#*=} | sed 's/,/ /g')
     shift
     ;;
+    -D|--no-deps)
+    NODEPS=1
+    shift
+    ;;
     *)
     # unknown option
     TARGET=$i
@@ -27,8 +36,12 @@ if [ "$1" == "" ]; then
   echo "Usage: $0 target_dir [-t=ts-node] [-f=f1,f2,f3]"
   exit 1
 fi
-DIR=$BASE/$TYPE
+if [ "$TYPE" == "" ]; then
+  echo "Usage: $0 target_dir [-t=ts-node] [-f=f1,f2,f3]"
+  exit 1
+fi
 
+DIR=$BASE/$TYPE
 
 if [ -d $TARGET ]; then
   echo -e "目标目录 \033[4m\033[33m$TARGET\033[0m 已存在"
@@ -41,13 +54,11 @@ if [ ! -d $DIR ]; then
   exit 3
 fi
 
-if [ $FILE == "" ]; then
-  echo -e "    \033[32m[初始化]\033[0m 输入模块文件名 (空格分隔)"
+if [ "$FILE" == "" ]; then
+  echo -e "\033[33输入模块文件名 (以,分隔)\033[0m"
   read flist
-  $FILE=$(echo $flist | sed 's/,/ /g')
+  FILE=$(echo $flist | sed 's/,/ /g')
 fi
-
-
 
 echo -e -n "    \033[32m[初始化]\033[0m 复制文件"
 cp -r $DIR $TARGET
@@ -63,7 +74,9 @@ fi
 if [ ! -f package.json ]; then
   echo -e -n "    \033[32m[初始化]\033[0m Npm 描述文件"
   npm init -y > /dev/null
-  sed 's/"test": "echo .*$/"test": "npx ava -v", "ls": "npm ls --depth=0", "up": "npm update --save \&\& npm dedupe --save", "cover": "rm -fr coverage \&\& npx nyc ava", "dev": "npx ava -v -w", "build": "rm -rf dist \&\& npx ncc build -m --no-source-map-register -C .\/index.js"/g' package.json > _tmp.json && rm -f package.json && mv _tmp.json package.json
+  sed 's/"test": "echo .*$/"test": "npx ava -v", "ls": "npm ls --depth=0", "up": "npm update --save \&\& npm dedupe --save", "cover": "rm -fr coverage \&\& npx nyc ava", "dev": "npx ava -v -w", "build": "rm -rf dist \&\& npx ncc build -m --no-source-map-register -C .\/index.js"/g' package.json | sed 's/^}$/,"husky": {"hooks": {"pre-commit": "npm test", "pre-push": "npm test"}}}/g' > _tmp.json && rm -f package.json && mv _tmp.json package.json
+
+
   echo -e "\033[1000D\033[32m ✓\033[0m"
 fi
 
@@ -78,31 +91,26 @@ if [ ! -h node_modules ]; then
   echo -e "\033[1000D\033[32m ✓\033[0m"
 fi
 
-# if [ -f package.json ]; then
-#   echo -e "    \033[32m[安装]\033[0m 默认依赖库"
-#   npm install --silent --save-dev typescript ts-node ava @types/node husky nyc @zeit/ncc > /dev/null
-#   npm dedupe --silent --save > /dev/null
-#   # npm install --silent --save-dev  @zeit/ncc > /dev/null
-#   echo -e "\033[1A\033[1000D\033[32m ✓\033[0m"
-# fi
-
-if [ ! -e lib ]; then
-  mkdir lib
+if [ ! "$FILE" == "" ]; then
+  echo -e -n "    \033[32m[初始化]\033[0m 生成代码文件"
+  if [ ! -e lib ]; then
+    mkdir lib
+  fi
+  if [ ! -e test/mock ]; then
+    mkdir -p test/mock
+  fi
+  for file in $FILE; do
+    sed "s/#name#/$(upper $file)/g" lib/.lib.ts > lib/$file.ts
+    sed "s/#name#/$file/g" test/.test.ts > test/test-$file.ts
+  done
+  rm lib/.lib.ts test/.test.ts
+  echo -e "\033[1000D\033[32m ✓\033[0m"
 fi
-if [ ! -e test/mock ]; then
-  mkdir -p test/mock
-fi
-for file in $flist; do
-  touch lib/$file.ts
-  touch test/test-$file.ts
-done
-echo -e "\033[1000D\033[32m ✓\033[0m"
 
-if [ -f package.json ]; then
+if [ "$NODEPS" == "" ]; then
   echo -e "    \033[32m[安装]\033[0m 默认依赖库"
   npm install --silent --save-dev typescript ts-node ava @types/node husky nyc @zeit/ncc > /dev/null
   npm dedupe --silent --save > /dev/null
-  # npm install --silent --save-dev  @zeit/ncc > /dev/null
   echo -e "\033[1A\033[1000D\033[32m ✓\033[0m"
 fi
-echo -e "\033[32m 初始化完成\033[0m                                     "
+echo -e "\033[32m 初始化完成\033[0m"
