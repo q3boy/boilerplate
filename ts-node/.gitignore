@@ -1,0 +1,8 @@
+node_modules
+node_modules.nosync
+.nyc_output
+.nyc_output.nosync
+coverage
+dist
+.DS_Store
+.vscode
